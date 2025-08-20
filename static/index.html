@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAG Text-to-Speech API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="file"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .audio-player {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .requirements {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 DAG Text-to-Speech API</h1>
+        
+        <div class="requirements">
+            <strong>Requirements:</strong>
+            <ul>
+                <li>Input audio file must be in WAV format</li>
+                <li>Maximum duration: 15 seconds</li>
+                <li>API server must be running on localhost:8000</li>
+            </ul>
+        </div>
+
+        <form id="speechForm">
+            <div class="form-group">
+                <label for="audioFile">Input Audio File (WAV, max 15s):</label>
+                <input type="file" id="audioFile" name="audio_file" accept=".wav" required>
+            </div>
+
+            <div class="form-group">
+                <label for="inputTranscription">Input Transcription:</label>
+                <textarea id="inputTranscription" name="input_transcription" placeholder="Enter the transcription of the input audio..." required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="targetText">Target Text:</label>
+                <textarea id="targetText" name="target_text" placeholder="Enter the target text to generate speech for..." required></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn">Generate Speech</button>
+        </form>
+
+        <div id="status" class="status"></div>
+        
+        <div id="audioPlayer" class="audio-player" style="display: none;">
+            <h3>Generated Audio:</h3>
+            <audio id="generatedAudio" controls>
+                Your browser does not support the audio element.
+            </audio>
+            <br>
+            <a id="downloadLink" download="generated_speech.wav">Download Audio File</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('speechForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const status = document.getElementById('status');
+            const audioPlayer = document.getElementById('audioPlayer');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Generating Speech...';
+            status.style.display = 'none';
+            audioPlayer.style.display = 'none';
+            
+            try {
+                const formData = new FormData();
+                const audioFile = document.getElementById('audioFile').files[0];
+                const inputTranscription = document.getElementById('inputTranscription').value;
+                const targetText = document.getElementById('targetText').value;
+                
+                if (!audioFile) {
+                    throw new Error('Please select an audio file');
+                }
+                
+                formData.append('audio_file', audioFile);
+                formData.append('input_transcription', inputTranscription);
+                formData.append('target_text', targetText);
+                
+                // Show info status
+                status.className = 'status info';
+                status.textContent = 'Sending request to API...';
+                status.style.display = 'block';
+                
+                const apiBase = window.location.origin;
+                const response = await fetch(`${apiBase}/generate-speech`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API Error: ${response.status} - ${errorText}`);
+                }
+                
+                // Get the audio blob
+                const audioBlob = await response.blob();
+                
+                // Create audio URL and show player
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audioElement = document.getElementById('generatedAudio');
+                const downloadLink = document.getElementById('downloadLink');
+                
+                audioElement.src = audioUrl;
+                downloadLink.href = audioUrl;
+                
+                // Show success status
+                status.className = 'status success';
+                status.textContent = 'Speech generated successfully!';
+                status.style.display = 'block';
+                
+                // Show audio player
+                audioPlayer.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                status.className = 'status error';
+                status.textContent = `Error: ${error.message}`;
+                status.style.display = 'block';
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generate Speech';
+            }
+        });
+        
+        // Add some example text
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set example values if fields are empty
+            if (!document.getElementById('inputTranscription').value) {
+                document.getElementById('inputTranscription').value = 'things escalate a bit. So how do you represent letters? Because obviously this makes our devices more useful, whether it\'s in English or any other human language. How could we go about representing the letter A for instance?';
+            }
+            if (!document.getElementById('targetText').value) {
+                document.getElementById('targetText').value = 'If at the end of the day, all our computers, all our phones have access to is electricity or equivalently switches or metaphorically tiny little light bulbs inside of them that can be on and off.';
+            }
+        });
+    </script>
+</body>
+</html> 
