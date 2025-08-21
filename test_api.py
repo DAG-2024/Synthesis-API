@@ -5,14 +5,14 @@ def test_api():
     """Test the DAG API with the existing audio file"""
     
     # API endpoint
-    url = "http://localhost:8000/generate-speech"
+    url = "http://localhost:9000/generate-speech"
     
     # Test data
     input_transcription = "things escalate a bit. So how do you represent letters? Because obviously this makes our devices more useful, whether it's in English or any other human language. How could we go about representing the letter A for instance?"
-    target_text = "Fix implemented: The server now writes the WAV to a persistent temp file."
+    target_text = " The fix implemented. "
     
     # Check if sample_audio.wav exists
-    audio_file_path = "./DAG/sample_audio.wav"
+    audio_file_path = "./sample_audio.wav"
     if not os.path.exists(audio_file_path):
         print(f"Error: {audio_file_path} not found!")
         return
